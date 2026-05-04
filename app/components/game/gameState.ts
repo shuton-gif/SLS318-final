@@ -33,6 +33,7 @@ export type PieceState = 'onGround' | 'held' | 'flying'
 export type Piece = {
     id: number
     word: string
+    reading?: string
     kind: Kind
     ownerRole?: Role
     x: number

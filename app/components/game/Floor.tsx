@@ -23,7 +23,7 @@ type FloorConfig = {
     slotCount: number
     expected: string[]
     goals: Goal[]
-    pieceSpecs: { word: string; kind: Kind; ownerRole?: Role }[]
+    pieceSpecs: { word: string; reading?: string; kind: Kind; ownerRole?: Role }[]
     p1Pickup?: Kind
     p2Pickup?: Kind
 }
@@ -43,8 +43,8 @@ function buildConfig(f: FloorData): FloorConfig {
         const expected = [f.JP]
         const goals: Goal[] = [{ x: SCENE_MAX_X / 2 + 200, slotIndex: 0 }]
         const pieceSpecs = [
-            { word: f.JP, kind: 'vocab' as Kind },
-            ...f.dummies.map((w) => ({ word: w, kind: 'vocab' as Kind })),
+            { word: f.JP, reading: f.furigana, kind: 'vocab' as Kind },
+            ...f.dummies.map((d) => ({ word: d.dummy, reading: d.hiragana, kind: 'vocab' as Kind })),
         ]
         return { slotCount, expected, goals, pieceSpecs }
     }
@@ -85,6 +85,7 @@ function buildInitialPieces(specs: FloorConfig['pieceSpecs']): Piece[] {
     const all = shuffle(specs).map<Piece>((s) => ({
         id: id++,
         word: s.word,
+        reading: s.reading,
         kind: s.kind,
         ownerRole: s.ownerRole,
         x: 0,
@@ -439,6 +440,29 @@ export default function FloorView({ floor }: { floor: FloorData }) {
                         <Player key={p.id} player={p} frozen={gameState.frozen} />
                     ))}
 
+                    {gameState.players.map((pl) => {
+                        if (!pl.holding || pl.heldPieceId === null) return null
+                        const piece = gameState.pieces.find((pc) => pc.id === pl.heldPieceId)
+                        if (!piece || !piece.reading) return null
+                        const playerWidthPx = pl.width * 16
+                        return (
+                            <div key={`reading-${pl.id}`} style={{
+                                position: 'absolute',
+                                top: `${pl.y - PIECE_SIZE - 36}px`,
+                                left: `${pl.x + playerWidthPx / 2}px`,
+                                transform: 'translateX(-50%)',
+                                color: 'white',
+                                fontFamily: "'JapanesePF', 'EnglishPixelFont', monospace",
+                                fontSize: '1.2rem',
+                                whiteSpace: 'nowrap',
+                                pointerEvents: 'none',
+                                textShadow: '0 0 4px black',
+                            }}>
+                                {piece.reading}
+                            </div>
+                        )
+                    })}
+
                 </div>
                 <div className={styles.GROUND} />
                 {(() => {
@@ -526,7 +550,7 @@ function CenterDisplay({ floor, submitted, textColor }: { floor: FloorData; subm
             }}>
                 <div style={{ fontSize: '3.5rem', letterSpacing: '0.1em' }}>{f.EN}</div>
                 {f.furigana && (
-                    <div style={{ fontSize: '1rem', opacity: 0.6, marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '2rem', opacity: 0.6, marginTop: '0.5rem' }}>
                         ({f.furigana})
                     </div>
                 )}
