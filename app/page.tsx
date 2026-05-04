@@ -18,8 +18,7 @@ export default function Landing() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem',
         }}>
             <h1 style={{ fontSize: '3rem', letterSpacing: '0.1em', margin: 0 }}>TOWER OF BABEL</h1>
-            <p style={{ opacity: 0.7, fontSize: '1rem', textAlign: 'center', maxWidth: '40rem' }}>
-                A two-player Japanese-learning climber. Player 1 (cyan) uses WASD, Player 2 (pink) uses arrow keys.
+            <p style={{ opacity: 0.7, fontSize: '1rem', textAlign: 'center', maxWidth: '50rem' }}>Player 1 (cyan) uses WASD, <br/> Player 2 (pink) uses arrow keys.<br/>
                 W / ↑ pick up &amp; throw. S / ↓ drop.
             </p>
             <Link href="/Game/1" style={{
