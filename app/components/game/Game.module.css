@@ -1,0 +1,54 @@
+.player {
+    position: absolute;
+}
+
+.gameContainer {
+    overflow: hidden;
+}
+
+.BG {
+    position: absolute;
+    background-repeat: repeat-x;
+    background-position: center bottom;
+    background-color: skyblue;
+
+    height: 540px;
+    width: 1100px;
+}
+
+.GROUND {
+    position: absolute;
+    height: 120px;
+    width: 1100px;
+    background-color: lightcoral;
+    top: 480px;
+}
+
+.GText {
+    justify-content: center;
+    display: flex;
+    margin-top: 3rem;
+
+    font-size: 2rem;
+}
+
+.gameScene {
+    width: 1100px;
+    height: 600px;
+    margin: 6rem auto;
+    position: relative;
+    opacity: 0.8;
+    font-family: 'EnglishPixelFont', 'JapanesePF', monospace;
+    overflow: hidden;
+    border-radius: 0.625rem;
+    box-shadow: 0.3125rem 0.3125rem 0.0625rem rgb(0, 0, 0, 0.5);
+    min-width: 1100px;
+    background-color: bisque;
+}
+
+.PTcontainer {
+    font-size: 5rem;
+    justify-content: center;
+    display: flex;
+    margin-top: 5rem;
+}
