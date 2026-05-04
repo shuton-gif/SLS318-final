@@ -78,7 +78,7 @@ export const RIM = {
     COLOR_WRONG: '#e74c3c',
 }
 
-export const SCENE_MAX_X = 1160
+export const SCENE_MAX_X = 1260
 
 // Per-player keybindings, indexed by player id.
 export type Keymap = { left: string; right: string; action: string; drop: string }

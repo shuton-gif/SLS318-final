@@ -13,13 +13,13 @@
     background-color: skyblue;
 
     height: 540px;
-    width: 1200px;
+    width: 1300px;
 }
 
 .GROUND {
     position: absolute;
     height: 120px;
-    width: 1200px;
+    width: 1300px;
     background-color: lightcoral;
     top: 480px;
 }
@@ -33,7 +33,7 @@
 }
 
 .gameScene {
-    width: 1200px;
+    width: 1300px;
     height: 600px;
     margin: 6rem auto;
     position: relative;

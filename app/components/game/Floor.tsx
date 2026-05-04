@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import styles from './Game.module.css'
@@ -534,7 +535,8 @@ export default function FloorView({ floor }: { floor: FloorData }) {
                 textAlign: 'center', color: '#222', fontFamily: "'EnglishPixelFont', monospace",
                 fontSize: '1rem', marginTop: '0.5rem',
             }}>
-                Floor {floor.floor} / {TOTAL_FLOORS}
+                Floor {floor.floor} / {TOTAL_FLOORS}<br/>
+                <Link href="/" style={{ color: '#03AED2', paddingTop: '2rem' }}>back to home</Link>
             </div>
         </div>
     )
@@ -633,7 +635,7 @@ function Goal({ x, flash, rising }: { x: number; flash: 'none' | 'correct' | 'wr
 
     const ductFill = flash === 'correct' ? RIM.COLOR_CORRECT
         : flash === 'wrong' ? RIM.COLOR_WRONG
-        : 'black'
+            : 'black'
 
     // Curved hose behind the duct: 100px wide stroke, starts at top of duct, sweeps up.
     const hoseStartX = x
