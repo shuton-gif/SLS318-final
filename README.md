@@ -4,6 +4,10 @@ Build a working demo of a two-player web game called **Tower of Babel**. The gam
 
 This is a **demo**, not a full production game. Prioritize getting one playable floor per tier (1, 31, 61) working end-to-end over polish. After the demo works, extend to more floors.
 
+## Set up
+
+[Setup Instructions](SETUP.md)
+
 ## Routing
 
 Use App Router dynamic segments:
