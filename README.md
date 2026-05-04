@@ -4,16 +4,6 @@ Build a working demo of a two-player web game called **Tower of Babel**. The gam
 
 This is a **demo**, not a full production game. Prioritize getting one playable floor per tier (1, 31, 61) working end-to-end over polish. After the demo works, extend to more floors.
 
-## Tech stack
-
-- **Next.js 14+ with App Router** (TypeScript)
-- **Tailwind CSS** for styling
-- **Framer Motion** for puzzle-piece drag/throw animations
-- **Zustand** for shared game state (no backend in this demo — both players play on the same screen, split keyboard/touch)
-- Floor data lives in `/data/floors.ts` as a typed array
-
-If a real-time multiplayer backend is needed later, leave a `// TODO: socket integration` comment where it would plug in. For now, both players use the same browser window with split controls.
-
 ## Routing
 
 Use App Router dynamic segments:
