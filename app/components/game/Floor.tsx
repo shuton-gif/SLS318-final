@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import styles from './Game.module.css'
 import {
     GameState, KEYMAPS, Kind, Piece, Player as PlayerType, Role,
@@ -41,7 +41,7 @@ function buildConfig(f: FloorData): FloorConfig {
     if (f.tier === 'vocabulary') {
         const slotCount = 1
         const expected = [f.JP]
-        const goals: Goal[] = [{ x: SCENE_MAX_X / 2, slotIndex: 0 }]
+        const goals: Goal[] = [{ x: SCENE_MAX_X / 2 + 200, slotIndex: 0 }]
         const pieceSpecs = [
             { word: f.JP, kind: 'vocab' as Kind },
             ...f.dummies.map((w) => ({ word: w, kind: 'vocab' as Kind })),
@@ -76,9 +76,8 @@ function buildConfig(f: FloorData): FloorConfig {
 }
 
 function layoutGoals(_n: number): Goal[] {
-    // Single submission goal at center-bottom for all tiers; slot index is
-    // resolved per-throw against the next matching empty slot.
-    return [{ x: SCENE_MAX_X / 2, slotIndex: -1 }]
+    // Single submission goal, shifted 200px right of center.
+    return [{ x: SCENE_MAX_X / 2 + 200, slotIndex: -1 }]
 }
 
 function buildInitialPieces(specs: FloorConfig['pieceSpecs']): Piece[] {
@@ -116,6 +115,28 @@ function isInAnyGoal(piece: Piece, goals: Goal[]): boolean {
     return false
 }
 
+// Skyblue (floor 1) → dark purple (floor 100)
+function floorBgColor(floor: number): string {
+    return lerpColor(floor, [135, 206, 235], [30, 8, 50])
+}
+
+// Dark (floor 1) → pure white (floor 71+), so text stays readable as bg darkens.
+function floorTextColor(floor: number): string {
+    const t = Math.max(0, Math.min(1, (floor - 1) / 70))
+    const r = Math.round(34 + (255 - 34) * t)
+    const g = Math.round(34 + (255 - 34) * t)
+    const b = Math.round(34 + (255 - 34) * t)
+    return `rgb(${r}, ${g}, ${b})`
+}
+
+function lerpColor(floor: number, start: number[], end: number[]): string {
+    const t = Math.max(0, Math.min(1, (floor - 1) / 99))
+    const r = Math.round(start[0] + (end[0] - start[0]) * t)
+    const g = Math.round(start[1] + (end[1] - start[1]) * t)
+    const b = Math.round(start[2] + (end[2] - start[2]) * t)
+    return `rgb(${r}, ${g}, ${b})`
+}
+
 function nextMatchingSlot(word: string, expected: string[], submitted: (string | null)[]): number {
     for (let i = 0; i < expected.length; i++) {
         if (submitted[i] == null && expected[i] === word) return i
@@ -125,12 +146,34 @@ function nextMatchingSlot(word: string, expected: string[], submitted: (string |
 
 export default function FloorView({ floor }: { floor: FloorData }) {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const fromParam = searchParams.get('from')
+    const fromFloor = fromParam !== null && Number.isFinite(Number(fromParam)) ? Number(fromParam) : null
     const cfg = useMemo(() => buildConfig(floor), [floor])
     const [gameState, setGameState] = useState<GameState>(() => ({
         ...initState(cfg.p1Pickup, cfg.p2Pickup),
         pieces: buildInitialPieces(cfg.pieceSpecs),
         submittedSlots: Array(cfg.slotCount).fill(null),
     }))
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => setMounted(true), [])
+
+    const advancedRef = useRef(false)
+
+    // Incoming-transition state: when ?from=N is present, the curtains start
+    // shut and we play the roll-up sequence before opening.
+    const [curtainOpen, setCurtainOpen] = useState(fromFloor === null)
+    const [enterTextRolled, setEnterTextRolled] = useState(false)
+    const [enterTextVisible, setEnterTextVisible] = useState(fromFloor !== null)
+
+    useEffect(() => {
+        if (fromFloor === null) return
+        const t1 = setTimeout(() => setEnterTextRolled(true), 500)   // roll number up
+        const t2 = setTimeout(() => setEnterTextVisible(false), 1300) // fade text
+        const t3 = setTimeout(() => setCurtainOpen(true), 1700)       // open curtains
+        return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+    }, [fromFloor])
+
     const cfgRef = useRef(cfg)
     useEffect(() => { cfgRef.current = cfg }, [cfg])
     const frozenRef = useRef(false)
@@ -154,15 +197,16 @@ export default function FloorView({ floor }: { floor: FloorData }) {
     useEffect(() => {
         const allFilled = gameState.submittedSlots.length === cfg.slotCount
             && gameState.submittedSlots.every((w, i) => w === cfg.expected[i])
-        if (!allFilled || gameState.complete) return
+        if (!allFilled || advancedRef.current) return
+        advancedRef.current = true
         setGameState((p) => ({ ...p, complete: true }))
         const next = nextFloorNumber(floor.floor)
         const t = setTimeout(() => {
-            if (next !== undefined) router.push(`/Game/${next}`)
+            if (next !== undefined) router.push(`/Game/${next}?from=${floor.floor}`)
             else router.push('/')
-        }, 1500)
+        }, 1800)
         return () => clearTimeout(t)
-    }, [gameState.submittedSlots, cfg, floor.floor, router, gameState.complete])
+    }, [gameState.submittedSlots, cfg, floor.floor, router])
 
     // input + tick
     useEffect(() => {
@@ -357,16 +401,32 @@ export default function FloorView({ floor }: { floor: FloorData }) {
     }, [])
 
     const accent = TIER_ACCENT[floor.tier]
+    const bgColor = floorBgColor(floor.floor)
+    const textColor = floorTextColor(floor.floor)
+
+    if (!mounted) return <div className={styles.gameContainer} suppressHydrationWarning />
+
 
     return (
         <div className={styles.gameContainer}>
             <div className={styles.gameScene}>
-                <div className={styles.BG}>
+                <div className={styles.BG} style={{ backgroundColor: bgColor }}>
 
-                    <CenterDisplay floor={floor} submitted={gameState.submittedSlots} />
+                    {floor.floor >= 71 && <Stars />}
+                    {floor.floor >= 81 && (
+                        <>
+                            <div className={styles.shootingStar} style={{ animation: 'shootA 10s linear infinite' }} />
+                            <div className={styles.shootingStar} style={{ animation: 'shootB 13s linear infinite', animationDelay: '4s' }} />
+                            <div className={styles.shootingStar} style={{ animation: 'shootC 11s linear infinite', animationDelay: '7s' }} />
+                            <div className={styles.shootingStar} style={{ animation: 'shootD 12s linear infinite', animationDelay: '2s' }} />
+                            <div className={styles.shootingStar} style={{ animation: 'shootE 14s linear infinite', animationDelay: '9s' }} />
+                        </>
+                    )}
+
+                    <CenterDisplay floor={floor} submitted={gameState.submittedSlots} textColor="white" />
 
                     {cfg.goals.map((g, i) => (
-                        <Goal key={i} x={g.x} flash={gameState.boxFlash} />
+                        <Goal key={i} x={g.x} flash={gameState.boxFlash} rising={gameState.complete} />
                     ))}
 
                     {gameState.pieces.map((p) => {
@@ -381,15 +441,68 @@ export default function FloorView({ floor }: { floor: FloorData }) {
 
                 </div>
                 <div className={styles.GROUND} />
-                {gameState.complete && (
+                {(() => {
+                    const curtainShut = gameState.complete || !curtainOpen
+                    return (
+                        <>
+                            <div style={{
+                                position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%',
+                                backgroundColor: 'black',
+                                transform: curtainShut ? 'translateX(0)' : 'translateX(-100%)',
+                                transition: gameState.complete ? 'transform 1s ease-in' : 'transform 0.8s ease-out',
+                                zIndex: 20,
+                                pointerEvents: 'none',
+                            }} />
+                            <div style={{
+                                position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%',
+                                backgroundColor: 'black',
+                                transform: curtainShut ? 'translateX(0)' : 'translateX(100%)',
+                                transition: gameState.complete ? 'transform 1s ease-in' : 'transform 0.8s ease-out',
+                                zIndex: 20,
+                                pointerEvents: 'none',
+                            }} />
+                        </>
+                    )
+                })()}
+
+                {/* Outgoing: "FLOOR N COMPLETE" appears after curtains close on this floor */}
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', fontFamily: "'EnglishPixelFont', monospace",
+                    fontSize: '3rem', letterSpacing: '0.1em',
+                    opacity: gameState.complete ? 1 : 0,
+                    transition: 'opacity 0.25s ease 1.125s',
+                    zIndex: 21,
+                    pointerEvents: 'none',
+                }}>
+                    FLOOR {floor.floor} COMPLETE!!
+                </div>
+
+                {/* Incoming: "FLOOR {from→current} COMPLETE" rolls up, then fades */}
+                {fromFloor !== null && (
                     <div style={{
                         position: 'absolute', inset: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(46, 204, 113, 0.85)', color: 'white',
-                        fontSize: '4rem', flexDirection: 'column', gap: '1rem',
+                        color: 'white', fontFamily: "'EnglishPixelFont', monospace",
+                        fontSize: '3rem', letterSpacing: '0.1em',
+                        opacity: enterTextVisible ? 1 : 0,
+                        transition: 'opacity 0.4s ease',
+                        zIndex: 21,
+                        pointerEvents: 'none',
                     }}>
-                        <div>Floor {floor.floor} cleared!</div>
-                        <div style={{ fontSize: '1.5rem' }}>{floor.JP} — {floor.EN}</div>
+                        <span>FLOOR&nbsp;</span>
+                        <span style={{ display: 'inline-block', height: '1em', overflow: 'hidden', verticalAlign: 'bottom', lineHeight: '1em' }}>
+                            <span style={{
+                                display: 'block',
+                                transform: enterTextRolled ? 'translateY(-1em)' : 'translateY(0)',
+                                transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}>
+                                <span style={{ display: 'block', height: '1em' }}>{fromFloor}</span>
+                                <span style={{ display: 'block', height: '1em' }}>{floor.floor}</span>
+                            </span>
+                        </span>
+                        <span>&nbsp;COMPLETE!!</span>
                     </div>
                 )}
             </div>
@@ -403,13 +516,13 @@ export default function FloorView({ floor }: { floor: FloorData }) {
     )
 }
 
-function CenterDisplay({ floor, submitted }: { floor: FloorData; submitted: (string | null)[] }) {
+function CenterDisplay({ floor, submitted, textColor }: { floor: FloorData; submitted: (string | null)[]; textColor: string }) {
     if (floor.tier === 'vocabulary') {
         const f = floor
         return (
             <div style={{
                 position: 'absolute', top: 100, left: 0, right: 0,
-                textAlign: 'center', color: '#222',
+                textAlign: 'center', color: textColor, zIndex: 5,
             }}>
                 <div style={{ fontSize: '3.5rem', letterSpacing: '0.1em' }}>{f.EN}</div>
                 {f.furigana && (
@@ -425,7 +538,7 @@ function CenterDisplay({ floor, submitted }: { floor: FloorData; submitted: (str
         return (
             <div style={{
                 position: 'absolute', top: 80, left: 0, right: 0,
-                textAlign: 'center', color: '#222',
+                textAlign: 'center', color: textColor, zIndex: 5,
             }}>
                 <div style={{ fontSize: '2.5rem' }}>
                     {floor.incomplete.map((tok, i) => {
@@ -448,7 +561,7 @@ function CenterDisplay({ floor, submitted }: { floor: FloorData; submitted: (str
     return (
         <div style={{
             position: 'absolute', top: 80, left: 0, right: 0,
-            textAlign: 'center', color: 'white',
+            textAlign: 'center', color: textColor, zIndex: 5,
         }}>
             <div style={{ fontSize: '2.5rem' }}>
                 {floor.incomplete.map((_, i) => {
@@ -465,19 +578,91 @@ function CenterDisplay({ floor, submitted }: { floor: FloorData; submitted: (str
     )
 }
 
-function Goal({ x, flash }: { x: number; flash: 'none' | 'correct' | 'wrong' }) {
-    const rimColor = flash === 'correct' ? RIM.COLOR_CORRECT
-        : flash === 'wrong' ? RIM.COLOR_WRONG
-        : RIM.COLOR
-    const baseTop = GROUND_TOP - RIM.BASE_HEIGHT
-    const uprightTop = baseTop - RIM.UPRIGHT_HEIGHT
-    const bar = (bg: string) => ({ position: 'absolute' as const, backgroundColor: bg, transition: 'background-color 0.2s' })
+function Stars() {
+    const stars = useMemo(() => Array.from({ length: 60 }, () => ({
+        x: Math.random() * SCENE_MAX_X,
+        y: Math.random() * (GROUND_TOP - 40),
+        size: Math.random() < 0.2 ? 3 : Math.random() < 0.6 ? 2 : 1,
+        opacity: 0.5 + Math.random() * 0.5,
+    })), [])
     return (
         <>
-            <div style={{ ...bar(RIM.COLOR), left: `${x - RIM.BAR_THICKNESS / 2}px`, top: `${baseTop}px`, width: `${RIM.BAR_THICKNESS}px`, height: `${RIM.BASE_HEIGHT}px` }} />
-            <div style={{ ...bar(rimColor), left: `${x - RIM.RIM_WIDTH / 2}px`, top: `${baseTop}px`, width: `${RIM.RIM_WIDTH}px`, height: `${RIM.BAR_THICKNESS}px` }} />
-            <div style={{ ...bar(rimColor), left: `${x - RIM.RIM_WIDTH / 2}px`, top: `${uprightTop}px`, width: `${RIM.BAR_THICKNESS}px`, height: `${RIM.UPRIGHT_HEIGHT}px` }} />
-            <div style={{ ...bar(rimColor), left: `${x + RIM.RIM_WIDTH / 2 - RIM.BAR_THICKNESS}px`, top: `${uprightTop}px`, width: `${RIM.BAR_THICKNESS}px`, height: `${RIM.UPRIGHT_HEIGHT}px` }} />
+            {stars.map((s, i) => (
+                <div key={i} style={{
+                    position: 'absolute',
+                    left: `${s.x}px`, top: `${s.y}px`,
+                    width: `${s.size}px`, height: `${s.size}px`,
+                    backgroundColor: 'white',
+                    opacity: s.opacity,
+                    pointerEvents: 'none',
+                }} />
+            ))}
+        </>
+    )
+}
+
+function Goal({ x, flash, rising }: { x: number; flash: 'none' | 'correct' | 'wrong'; rising?: boolean }) {
+    const ductTop = GROUND_TOP - RIM.BASE_HEIGHT - RIM.UPRIGHT_HEIGHT
+    const ductHeight = RIM.UPRIGHT_HEIGHT
+    const ductWidth = RIM.RIM_WIDTH
+    const ductLeft = x - ductWidth / 2
+
+    const ductFill = flash === 'correct' ? RIM.COLOR_CORRECT
+        : flash === 'wrong' ? RIM.COLOR_WRONG
+        : 'black'
+
+    // Curved hose behind the duct: 100px wide stroke, starts at top of duct, sweeps up.
+    const hoseStartX = x
+    const hoseStartY = ductTop + 10
+    const hoseEndX = x + 320
+    const hoseEndY = -20
+    const c1x = x - 40
+    const c1y = ductTop - 180
+    const c2x = x + 360
+    const c2y = 220
+
+    const riseTransform = rising ? 'translateY(-800px)' : 'translateY(0)'
+    const riseTransition = 'transform 1.4s cubic-bezier(0.4, 0, 0.6, 1)'
+
+    return (
+        <>
+            <svg
+                style={{
+                    position: 'absolute', left: 0, top: 0,
+                    width: SCENE_MAX_X, height: GROUND_TOP,
+                    pointerEvents: 'none', overflow: 'visible',
+                    transform: riseTransform, transition: riseTransition,
+                }}
+            >
+                <path
+                    d={`M ${hoseStartX} ${hoseStartY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${hoseEndX} ${hoseEndY}`}
+                    stroke="#5a5a5a"
+                    strokeWidth={50}
+                    strokeLinecap="round"
+                    fill="none"
+                />
+                <path
+                    d={`M ${hoseStartX} ${hoseStartY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${hoseEndX} ${hoseEndY}`}
+                    stroke="#7d7d7d"
+                    strokeWidth={50}
+                    strokeLinecap="round"
+                    fill="none"
+                    strokeDasharray="2 18"
+                    opacity={0.35}
+                />
+            </svg>
+            <div style={{
+                position: 'absolute',
+                left: `${ductLeft}px`,
+                top: `${ductTop}px`,
+                width: `${ductWidth}px`,
+                height: `${ductHeight}px`,
+                backgroundColor: ductFill,
+                border: '6px solid #7d7d7d',
+                boxSizing: 'border-box',
+                transform: riseTransform,
+                transition: `background-color 0.2s, ${riseTransition}`,
+            }} />
         </>
     )
 }

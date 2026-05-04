@@ -2,8 +2,8 @@ import { ReactNode } from 'react'
 import './globals.css'
 
 export const metadata = {
-    title: 'SLS318 Escape Rooms',
-    description: 'Local WiFi app with SQLite',
+    title: 'TOWER_OF_BABEL',
+    description: '',
 }
 
 export default function Layout({ children }: { children: ReactNode }) {

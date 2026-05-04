@@ -7,3 +7,45 @@
     font-family: 'JapanesePF';
     src: url('/JapanesePF.ttf') format('truetype');
 }
+
+/* All stars share the same trajectory shape (dx=-440, dy=1140) — only the start
+ * x-position differs, evenly spread 220px apart across the scene. */
+@keyframes shootA {
+    0%   { transform: translate(990px, -40px); opacity: 0; }
+    85%  { transform: translate(990px, -40px); opacity: 0; }
+    87%  { opacity: 1; }
+    99%  { opacity: 1; }
+    100% { transform: translate(550px, 1100px); opacity: 0; }
+}
+
+@keyframes shootB {
+    0%   { transform: translate(770px, -40px); opacity: 0; }
+    85%  { transform: translate(770px, -40px); opacity: 0; }
+    87%  { opacity: 1; }
+    99%  { opacity: 1; }
+    100% { transform: translate(330px, 1100px); opacity: 0; }
+}
+
+@keyframes shootC {
+    0%   { transform: translate(550px, -40px); opacity: 0; }
+    85%  { transform: translate(550px, -40px); opacity: 0; }
+    87%  { opacity: 1; }
+    99%  { opacity: 1; }
+    100% { transform: translate(110px, 1100px); opacity: 0; }
+}
+
+@keyframes shootD {
+    0%   { transform: translate(330px, -40px); opacity: 0; }
+    85%  { transform: translate(330px, -40px); opacity: 0; }
+    87%  { opacity: 1; }
+    99%  { opacity: 1; }
+    100% { transform: translate(-110px, 1100px); opacity: 0; }
+}
+
+@keyframes shootE {
+    0%   { transform: translate(110px, -40px); opacity: 0; }
+    85%  { transform: translate(110px, -40px); opacity: 0; }
+    87%  { opacity: 1; }
+    99%  { opacity: 1; }
+    100% { transform: translate(-330px, 1100px); opacity: 0; }
+}

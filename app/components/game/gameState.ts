@@ -69,15 +69,15 @@ export const THROW_VY = -14
 // Goal-rim geometry (single rim's footprint; the x position is per-goal)
 export const RIM = {
     BASE_HEIGHT: 150,
-    RIM_WIDTH: 200,
-    UPRIGHT_HEIGHT: 50,
+    RIM_WIDTH: 150,
+    UPRIGHT_HEIGHT: 100,
     BAR_THICKNESS: 8,
     COLOR: 'white',
     COLOR_CORRECT: '#2ecc71',
     COLOR_WRONG: '#e74c3c',
 }
 
-export const SCENE_MAX_X = 1100
+export const SCENE_MAX_X = 1160
 
 // Per-player keybindings, indexed by player id.
 export type Keymap = { left: string; right: string; action: string; drop: string }
