@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import styles from './Game.module.css'
 import {
@@ -11,6 +11,7 @@ import Player from '../../Player/player'
 import PuzzlePiece, { PIECE_SIZE, pieceWidth } from './PuzzlePiece'
 import HUD from './HUD'
 import { Floor as FloorData, getRoleAssignment, nextFloorNumber, TOTAL_FLOORS } from '../../../data/floors'
+import { useRunCache } from './useRunCache'
 
 const TIER_ACCENT: Record<FloorData['tier'], string> = {
     vocabulary: '#03AED2',
@@ -161,7 +162,7 @@ export default function FloorView({ floor }: { floor: FloorData }) {
     useEffect(() => setMounted(true), [])
 
     const advancedRef = useRef(false)
-
+    const [timeUp, setTimeUp] = useState(false)
     // Incoming-transition state: when ?from=N is present, the curtains start
     // shut and we play the roll-up sequence before opening.
     const [curtainOpen, setCurtainOpen] = useState(fromFloor === null)
@@ -180,6 +181,40 @@ export default function FloorView({ floor }: { floor: FloorData }) {
     useEffect(() => { cfgRef.current = cfg }, [cfg])
     const frozenRef = useRef(false)
     useEffect(() => { frozenRef.current = gameState.frozen }, [gameState.frozen])
+
+    // Clock ran out: pieces go home, slots empty, players drop what they hold.
+    // The floor itself does not change, so the players just run it again.
+    const resetFloor = useCallback(() => {
+        setGameState((prev) => ({
+            ...prev,
+            players: prev.players.map((p) => ({ ...p, holding: false, heldPieceId: null })),
+            pieces: buildInitialPieces(cfgRef.current.pieceSpecs),
+            submittedSlots: Array(cfgRef.current.slotCount).fill(null),
+            boxFlash: 'none',
+            flashSlot: null,
+            frozen: false,
+        }))
+        setTimeUp(true)
+    }, [])
+
+    useEffect(() => {
+        if (!timeUp) return
+        const t = setTimeout(() => setTimeUp(false), 1200)
+        return () => clearTimeout(t)
+    }, [timeUp])
+
+    // Per-floor clock, mirrored into localStorage along with run progression.
+    const { ready: clockReady, remainingMs, recordMistake, recordCleared } = useRunCache({
+        floor: floor.floor,
+        tier: floor.tier,
+        running: mounted && curtainOpen && !gameState.complete,
+        onExpire: resetFloor,
+    })
+
+    // A wrong throw counts against the run.
+    useEffect(() => {
+        if (gameState.boxFlash === 'wrong') recordMistake()
+    }, [gameState.boxFlash, recordMistake])
 
     // unfreeze after wrong throw
     useEffect(() => {
@@ -203,12 +238,13 @@ export default function FloorView({ floor }: { floor: FloorData }) {
         advancedRef.current = true
         setGameState((p) => ({ ...p, complete: true }))
         const next = nextFloorNumber(floor.floor)
+        recordCleared(next)
         const t = setTimeout(() => {
             if (next !== undefined) router.push(`/Game/${next}?from=${floor.floor}`)
             else router.push('/')
         }, 1800)
         return () => clearTimeout(t)
-    }, [gameState.submittedSlots, cfg, floor.floor, router])
+    }, [gameState.submittedSlots, cfg, floor.floor, router, recordCleared])
 
     // input + tick
     useEffect(() => {
@@ -426,6 +462,27 @@ export default function FloorView({ floor }: { floor: FloorData }) {
                     )}
 
                     <CenterDisplay floor={floor} submitted={gameState.submittedSlots} textColor="white" />
+
+                    <HUD
+                        floor={floor}
+                        accent={accent}
+                        remainingMs={remainingMs}
+                        clockReady={clockReady}
+                    />
+
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: RIM.COLOR_WRONG, fontFamily: "'EnglishPixelFont', monospace",
+                        fontSize: '3rem', letterSpacing: '0.1em',
+                        textShadow: '0 0 12px black',
+                        opacity: timeUp ? 1 : 0,
+                        transition: 'opacity 0.2s ease',
+                        zIndex: 19,
+                        pointerEvents: 'none',
+                    }}>
+                        TIME UP
+                    </div>
 
                     {cfg.goals.map((g, i) => (
                         <Goal key={i} x={g.x} flash={gameState.boxFlash} rising={gameState.complete} />

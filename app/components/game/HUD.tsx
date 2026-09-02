@@ -1,6 +1,7 @@
 'use client'
 import { Floor } from '../../../data/floors'
 import { ROLE_COLORS, ROLES } from './gameState'
+import { formatClock } from './saveCache'
 
 const TIER_LABEL: Record<Floor['tier'], string> = {
     vocabulary: 'VOCABULARY',
@@ -8,7 +9,18 @@ const TIER_LABEL: Record<Floor['tier'], string> = {
     construction: 'CONSTRUCTION',
 }
 
-export default function HUD({ floor, accent }: { floor: Floor; accent: string }) {
+const LOW_TIME_MS = 10_000
+
+export default function HUD({
+    floor, accent, remainingMs, clockReady,
+}: {
+    floor: Floor
+    accent: string
+    remainingMs: number
+    /** Held back until the saved clock is read, so a resumed floor never flashes a full bar. */
+    clockReady: boolean
+}) {
+    const low = remainingMs <= LOW_TIME_MS
     return (
         <>
             <div style={{
@@ -18,6 +30,15 @@ export default function HUD({ floor, accent }: { floor: Floor; accent: string })
                 <span>FLOOR {floor.floor} / 100</span>
                 <span style={{ margin: '0 0.5rem', color: accent }}>·</span>
                 <span style={{ color: accent }}>{TIER_LABEL[floor.tier]}</span>
+            </div>
+            <div style={{
+                position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+                fontFamily: "'EnglishPixelFont', monospace", fontSize: '1.5rem',
+                color: low ? '#e74c3c' : '#222',
+                opacity: clockReady ? 1 : 0,
+                transition: 'color 0.2s, opacity 0.2s',
+            }}>
+                {formatClock(remainingMs)}
             </div>
             <div style={{ position: 'absolute', top: 10, right: 20, display: 'flex', gap: '0.5rem' }}>
                 {ROLES.map((r) => (

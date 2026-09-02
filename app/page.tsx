@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { FLOORS } from '../data/floors'
+import RunControls from './components/RunControls'
 
 const TIER_ACCENT = {
     vocabulary: '#03AED2',
@@ -21,13 +22,7 @@ export default function Landing() {
             <p style={{ opacity: 0.7, fontSize: '1rem', textAlign: 'center', maxWidth: '50rem' }}>Player 1 (cyan) uses WASD, <br/> Player 2 (pink) uses arrow keys.<br/>
                 W / ↑ pick up &amp; throw. S / ↓ drop.
             </p>
-            <Link href="/Game/1" style={{
-                display: 'inline-block', padding: '1rem 2rem', fontSize: '1.5rem',
-                backgroundColor: '#03AED2', color: '#0b1d2a',
-                border: '4px solid white', textDecoration: 'none',
-            }}>
-                START AT FLOOR 1
-            </Link>
+            <RunControls />
 
             <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: '24rem' }}>
                 <div style={{ fontSize: '0.875rem', opacity: 0.6 }}>POPULATED FLOORS</div>
